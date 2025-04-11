@@ -1,0 +1,91 @@
+<template>
+  <div id="map" style="height: 600px; width: 100%;"></div>
+</template>
+
+<script>
+export default {
+  name: 'NaverMap',
+  mounted() {
+    // Naver Maps API 로드
+    const script = document.createElement('script');
+    script.src = 'https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=YOUR_CLIENT_ID';
+    script.async = true;
+    script.onload = () => this.initMap();
+    document.head.appendChild(script);
+
+    // MarkerClustering.js 로드 (로컬 또는 CDN 가정)
+    const clusterScript = document.createElement('script');
+    clusterScript.src = '/path/to/MarkerClustering.js'; // 실제 경로로 수정
+    clusterScript.async = true;
+    document.head.appendChild(clusterScript);
+  },
+  methods: {
+    initMap() {
+      // 지도 초기화 (서울 중심)
+      const map = new naver.maps.Map('map', {
+        zoom: 12,
+        center: new naver.maps.LatLng(37.5665, 126.9780),
+      });
+
+      // 10개의 마커 데이터
+      const markersData = [
+        { position: new naver.maps.LatLng(37.5665, 126.9780), title: '마커 1: 서울시청' },
+        { position: new naver.maps.LatLng(37.5700, 126.9750), title: '마커 2: 남대문' },
+        { position: new naver.maps.LatLng(37.5600, 126.9800), title: '마커 3: 동대문' },
+        { position: new naver.maps.LatLng(37.5650, 126.9900), title: '마커 4: 명동' },
+        { position: new naver.maps.LatLng(37.5580, 126.9700), title: '마커 5: 종로' },
+        { position: new naver.maps.LatLng(37.5720, 126.9600), title: '마커 6: 북촌' },
+        { position: new naver.maps.LatLng(37.5500, 126.9850), title: '마커 7: 이태원' },
+        { position: new naver.maps.LatLng(37.5750, 126.9950), title: '마커 8: 경복궁' },
+        { position: new naver.maps.LatLng(37.5550, 126.9650), title: '마커 9: 홍대' },
+        { position: new naver.maps.LatLng(37.5680, 126.9870), title: '마커 10: 광화문' },
+      ];
+
+      // 마커 생성
+      const markers = markersData.map((data) => {
+        return new naver.maps.Marker({
+          position: data.position,
+          map: map,
+          title: data.title,
+        });
+      });
+
+      // 클러스터링 설정
+      const htmlMarker1 = {
+        content:
+          '<div style="cursor:pointer;width:40px;height:40px;line-height:42px;font-size:10px;color:white;text-align:center;font-weight:bold;background:url(https://navermaps.github.io/maps.js.ncp/docs/img/cluster-marker-1.png);background-size:contain;"></div>',
+        size: new naver.maps.Size(40, 40),
+        anchor: new naver.maps.Point(20, 20),
+      };
+      // 추가 클러스터 아이콘 (간단히 1개만 사용, 필요 시 확장)
+      const markerClustering = new MarkerClustering({
+        minClusterSize: 2,
+        maxZoom: 15,
+        map: map,
+        markers: markers,
+        disableClickZoom: false,
+        gridSize: 120,
+        icons: [htmlMarker1],
+        indexGenerator: [10],
+        stylingFunction: (clusterMarker, count) => {
+          clusterMarker.getElement().querySelector('div:first-child').textContent = count;
+        },
+      });
+    },
+  },
+  beforeUnmount() {
+    // 지도 정리
+    if (this.map) {
+      this.map.destroy();
+    }
+  },
+};
+</script>
+
+<style scoped>
+/* 지도 스타일 */
+#map {
+  height: 600px;
+  width: 100%;
+}
+</style>
