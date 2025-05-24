@@ -1,0 +1,145 @@
+/**
+ * Soft Remove Only
+ *
+ *모든 마커를 유지하고 setVisible(false)만 사용
+ */
+
+// ✅ VERSION A: Soft Remove Only (setVisible만 사용)
+
+softRemoveAllMarkers() {
+  for (const id in this.markerMap) {
+    this.markerMap[id].setVisible(false); // 🔴 주의: DOM은 유지됨
+  }
+},
+
+createOrUpdateMarkers() {
+  const bounds = this.map.getBounds();
+  const markers = [];
+
+  this.resultDataList.forEach(item => {
+    let marker = this.markerMap[item.id];
+
+    if (!marker) {
+      marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(item.lat, item.lng),
+        map: null,
+      });
+      this.markerMap[item.id] = marker;
+    }
+
+    const inViewport = bounds.hasLatLng(marker.getPosition());
+
+    if (inViewport) {
+      marker.setMap(this.map);
+      marker.setVisible(true);
+
+      if (!marker._iconSet) {
+        marker.setIcon({
+          content: this.makeMarkerContent(item),
+          anchor: new naver.maps.Point(16, 16),
+          size: new naver.maps.Size(32, 32)
+        });
+        marker._iconSet = true;
+      }
+    } else {
+      marker.setVisible(false); // 🔴 주의: 마커는 남아있고 DOM도 유지됨
+    }
+
+    markers.push(marker);
+  });
+
+  this.markerCluster.setMarkers(null);
+  this.markerCluster.addMarkers(markers);
+}
+
+
+/**
+ * Mixed Strategy (Hybrid)
+ *
+ *기본은 soft remove, 마커 수 많을 땐 setMap(null)
+ */
+
+// ✅ VERSION B: Mixed Strategy (조건부 제거 + setVisible 혼합)
+
+createOrUpdateMarkers() {
+  const bounds = this.map.getBounds();
+  const markers = [];
+
+  this.resultDataList.forEach(item => {
+    let marker = this.markerMap[item.id];
+
+    if (!marker) {
+      marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(item.lat, item.lng),
+        map: null,
+      });
+      this.markerMap[item.id] = marker;
+    }
+
+    const inViewport = bounds.hasLatLng(marker.getPosition());
+
+    if (inViewport) {
+      marker.setMap(this.map);
+      marker.setVisible(true);
+
+      if (!marker._iconSet) {
+        marker.setIcon({
+          content: this.makeMarkerContent(item),
+          anchor: new naver.maps.Point(16, 16),
+          size: new naver.maps.Size(32, 32)
+        });
+        marker._iconSet = true;
+      }
+    } else {
+      // 🔴 주의: 마커 수가 많을 경우에는 완전 제거
+      if (this.resultDataList.length > 7000) {
+        marker.setMap(null); // 🔴 완전 제거
+        delete this.markerMap[item.id]; // 🔴 메모리에서 제거
+      } else {
+        marker.setVisible(false); // 🔴 Soft remove 유지
+      }
+    }
+
+    if (this.markerMap[item.id]) {
+      markers.push(this.markerMap[item.id]);
+    }
+  });
+
+  this.markerCluster.setMarkers(null);
+  this.markerCluster.addMarkers(markers);
+}
+
+/**
+ *Full Remove
+ *	뷰포트 밖 마커는 전부 setMap(null) + 삭제
+ */
+
+// ✅ VERSION C: Full Remove (항상 setMap(null), 캐시 안 함)
+
+createOrUpdateMarkers() {
+  const bounds = this.map.getBounds();
+  const markers = [];
+
+  this.resultDataList.forEach(item => {
+    const inViewport = bounds.hasLatLng(new naver.maps.LatLng(item.lat, item.lng));
+
+    if (!inViewport) return; // 🔴 주의: 뷰포트 밖은 바로 스킵
+
+    const marker = new naver.maps.Marker({
+      position: new naver.maps.LatLng(item.lat, item.lng),
+      map: this.map,
+      icon: {
+        content: this.makeMarkerContent(item),
+        anchor: new naver.maps.Point(16, 16),
+        size: new naver.maps.Size(32, 32)
+      }
+    });
+
+    markers.push(marker);
+  });
+
+  this.markerCluster.setMarkers(null);
+  this.markerCluster.addMarkers(markers);
+
+  // 🔴 주의: markerMap 사용 안 함. 모든 마커는 생성 후 잊어버림
+}
