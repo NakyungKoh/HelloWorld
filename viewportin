@@ -1,0 +1,63 @@
+updateMarkers(list) {
+  const bounds = this.map.getBounds();
+
+  const isInViewport = (lat, lng) => bounds.hasLatLng(new window.naver.maps.LatLng(lat, lng));
+
+  // 기존 마커 제거
+  Object.values(this.markerMap).forEach(marker => marker.setMap(null));
+  this.markerMap = {};
+  this.clearGroupMarkers();
+
+  const groupedMap = {};
+  const normalItems = [];
+
+  list.forEach(item => {
+    if (!isInViewport(item.lat, item.lng)) return;
+
+    if (item.isOverlapped) {
+      if (!groupedMap[item.overlapGroupId]) {
+        groupedMap[item.overlapGroupId] = [];
+      }
+      groupedMap[item.overlapGroupId].push(item);
+    } else {
+      normalItems.push(item);
+    }
+  });
+
+  // 일반 마커
+  normalItems.forEach(item => {
+    const pos = new window.naver.maps.LatLng(item.lat, item.lng);
+    const marker = new window.naver.maps.Marker({
+      position: pos,
+      map: this.map
+    });
+    marker.id = item.placeId;
+    marker.title = item.storeNm;
+    this.markerMap[item.placeId] = marker;
+  });
+
+  // 겹침 마커 (대표 마커만)
+  Object.entries(groupedMap).forEach(([groupId, group]) => {
+    const pos = new window.naver.maps.LatLng(group[0].lat, group[0].lng);
+    const marker = new window.naver.maps.Marker({
+      position: pos,
+      map: this.map,
+      icon: {
+        content: `<div class="overlap-marker">${group.length}</div>`,
+        size: new window.naver.maps.Size(30, 30),
+        anchor: new window.naver.maps.Point(15, 15)
+      }
+    });
+
+    marker.id = `group-${groupId}`;
+    this.markerMap[marker.id] = marker;
+    this.groupMarkers.push(marker);
+
+    window.naver.maps.Event.addListener(marker, 'click', () => {
+      this.showGroupPopup(marker, group);
+    });
+  });
+
+  const allMarkers = Object.values(this.markerMap);
+  this.markerCluster.setMarkers(allMarkers);
+}
