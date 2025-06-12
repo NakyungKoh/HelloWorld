@@ -1,0 +1,192 @@
+<template>
+  <div id="map" style="height: 100vh;"></div>
+  <button @click="search">검색</button>
+</template>
+
+<script>
+import axios from 'axios';
+
+export default {
+  data() {
+    return {
+      map: null,
+      markerMap: {}, // { placeId: Marker }
+      groupMarkers: [],
+      markerCluster: null,
+      infoWindow: null,
+      itemList: [],
+      selectedItem: null
+    };
+  },
+
+  mounted() {
+    this.initMap();
+    window.__onTitleClick = (id) => this.onClickToDetail(id); // 팝업 클릭 연결
+  },
+
+  methods: {
+    async initMap() {
+      this.map = new window.naver.maps.Map('map', {
+        center: new window.naver.maps.LatLng(37.5665, 126.9780),
+        zoom: 15
+      });
+
+      this.markerCluster = new window.naver.maps.MarkerClustering({
+        map: this.map,
+        minClusterSize: 2,
+        gridSize: 100,
+        markers: []
+      });
+
+      window.naver.maps.Event.addListener(this.map, 'idle', () => {
+        if (this.map.getZoom() >= 16) {
+          this.updateMarkers(this.itemList);
+        } else {
+          this.clearGroupMarkers();
+        }
+      });
+    },
+
+    async search() {
+      const res = await axios.get('/api/markers');
+      this.itemList = res.data;
+      this.updateMarkers(this.itemList);
+    },
+
+    updateMarkers(list) {
+      // 기존 마커 정리
+      Object.keys(this.markerMap).forEach(id => {
+        if (!list.find(item => item.placeId === id)) {
+          this.markerMap[id].setMap(null);
+          delete this.markerMap[id];
+        }
+      });
+
+      this.clearGroupMarkers();
+
+      const groupedMap = {}; // { groupId: [items] }
+      const normalItems = [];
+
+      list.forEach(item => {
+        if (item.isOverlapped) {
+          if (!groupedMap[item.overlapGroupId]) {
+            groupedMap[item.overlapGroupId] = [];
+          }
+          groupedMap[item.overlapGroupId].push(item);
+        } else {
+          normalItems.push(item);
+        }
+      });
+
+      // 일반 마커 처리
+      normalItems.forEach(item => {
+        const pos = new window.naver.maps.LatLng(item.lat, item.lng);
+        const marker = new window.naver.maps.Marker({
+          position: pos,
+          map: this.map
+        });
+        marker.id = item.placeId;
+        marker.title = item.storeNm;
+        this.markerMap[item.placeId] = marker;
+      });
+
+      // 겹침 대표 마커만 생성
+      Object.entries(groupedMap).forEach(([groupId, group]) => {
+        const pos = new window.naver.maps.LatLng(group[0].lat, group[0].lng);
+
+        const marker = new window.naver.maps.Marker({
+          position: pos,
+          map: this.map,
+          icon: {
+            content: `<div class=\"overlap-marker\">${group.length}</div>`,
+            size: new window.naver.maps.Size(30, 30),
+            anchor: new window.naver.maps.Point(15, 15)
+          }
+        });
+
+        marker.id = `group-${groupId}`;
+        this.markerMap[marker.id] = marker;
+        this.groupMarkers.push(marker);
+
+        window.naver.maps.Event.addListener(marker, 'click', () => {
+          this.showGroupPopup(marker, group);
+        });
+      });
+
+      const allMarkers = Object.values(this.markerMap);
+      this.markerCluster.setMarkers(allMarkers);
+    },
+
+    // groupOverlappingMarkers 제거됨: 백엔드에서 겹침 여부 계산,
+
+    getDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const toRad = x => x * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    },
+
+    clearGroupMarkers() {
+      this.groupMarkers.forEach(m => m.setMap(null));
+      this.groupMarkers = [];
+      if (this.infoWindow) this.infoWindow.close();
+    },
+
+    showGroupPopup(marker, group) {
+      if (this.infoWindow) this.infoWindow.close();
+
+      const content = `
+        <div style="min-width:200px;">
+          <strong>${group.length}개 장소</strong>
+          <ul style="padding-left:15px; margin:5px 0;">
+            ${group.map(m => `
+              <li onclick="__onTitleClick('${m.id}')" style="cursor:pointer; color:blue;">
+                ${m.title || '이름없음'}
+              </li>`).join('')}
+          </ul>
+        </div>
+      `;
+
+      this.infoWindow = new window.naver.maps.InfoWindow({
+        content,
+        maxWidth: 300,
+        disableAnchor: true
+      });
+
+      // InfoWindow는 클릭 이벤트에서 open하도록 변경됨
+        // this.infoWindow.open(this.map, marker);
+    },
+
+    onClickToDetail(id) {
+      const target = this.itemList.find(i => i.placeId === id);
+      if (!target) return;
+
+      this.selectedItem = target;
+
+      this.$nextTick(() => {
+        const el = document.getElementById(`item-${id}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+  }
+};
+</script>
+
+<style scoped>
+.overlap-marker {
+  background: #0080ff;
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+</style>
