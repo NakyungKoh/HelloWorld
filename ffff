@@ -1,0 +1,40 @@
+<template>
+  <div v-if="groupId" :data-id="groupId" class="marker" @mouseenter="hover()" @mouseleave="leave()">
+    <div class="marker-complex-inner badge-border" data-text="동일주소" show-text="동일주소">
+      <div class="complex-infos">
+        <div class="complex-title">
+          <span class="badge" data-text="동일주소" show-text="동일주소"></span>
+        </div>
+        <div v-for="(item, index) in info" :key="index" class="complex-address">
+          <span @click="selectItem(item)">{{ item.storeNm  }}({{ item.ctgryCd  }})</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div v-else class="marker" :data-id="info.placeId" @mouseenter="hover()" @mouseleave="leave()" @click="selectItem(info)">
+    <div class="marker-complex-inner badge-border" :data-text="info.ctgryCd" :show-text="info.ctgryNm">
+      <div class="complex-infos">
+        <div class="complex-title">
+          <span class="store-name">{{ info.storeNm }}</span>
+          <span class="badge" :data-text="info.ctgryCd" :show-text="info.ctgryNm"></span>
+        </div>
+        <div v-if="info.addr || info.roadAddr" class="complex-address">{{ info.addr ? info.addr : info.roadAddr }}</div>
+        <div v-if="(info.ctgryCd === '폐업' && info.endDate) || info.startDate || info.active_date" class="complex-date">
+            <span v-if="info.ctgryCd === '폐업' && info.endDate" data-text="폐업일: ">{{ info.endDate }}</span>
+            <span v-else-if="info.ctgryCd === '신축건물'" data-text="사용승인일: ">{{ info.startDate }}</span>
+            <span v-else-if="['창업도래', '창업'].includes(info.ctgryCd)" data-text="허가일: ">{{ info.startDate }}</span>
+            <span v-else data-text="등록일: ">{{ info.ctgryCd === 'OnePic' && info.spotRegUserNm ? [info.startDate, '(', info.spotRegUserNm, ')'].join('') : info.startDate }}</span>
+<!--          <span data-text="폐업일: ">{{ info.startDate }}</span>-->
+<!--          <span v-if="active_date" data-text="활동등록일: "> {{info.active_date}}</span>-->
+        </div>
+        <div v-if="info.viewCnt || info.salesActCnt || info.salesResultCd" class="complex-data">
+          <span v-if="info.viewCnt" style="color: rgba(15,17,20, 1)" data-text="조회 ">{{ info.viewCnt }} </span>
+          <span v-if="info.viewCnt" style="opacity: 0.5"> / </span>
+          <span v-if="info.salesActCnt" style="color: rgba(237,32,40, 1);" data-text="활동 ">{{ info.salesActCnt }}</span>
+          <span v-if="info.salesActCnt" style="opacity: 0.5"> / </span>
+          <span v-if="info.salesResultCd" style="color: rgba(15,17,20, 1)" data-text="영업활동 ">{{ info.salesResultCd }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
