@@ -1,0 +1,93 @@
+// 🔐 XSS 방지용 이스케이프 함수
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// 📅 날짜 렌더링
+function renderDate(info) {
+  const startDate = escapeHTML(info.startDate);
+  const endDate = escapeHTML(info.endDate);
+  const user = escapeHTML(info.spotRegUserNm);
+
+  if (info.ctgryCd === '폐업' && endDate) {
+    return `<div class="complex-date"><span data-text="폐업일: ">${endDate}</span></div>`;
+  }
+
+  if (info.ctgryCd === '신축건물') {
+    return `<div class="complex-date"><span data-text="사용승인일: ">${startDate}</span></div>`;
+  }
+
+  if (['창업도래', '창업'].includes(info.ctgryCd)) {
+    return `<div class="complex-date"><span data-text="허가일: ">${startDate}</span></div>`;
+  }
+
+  if (info.ctgryCd === 'OnePic' && user) {
+    return `<div class="complex-date"><span data-text="등록일: ">${startDate}(${user})</span></div>`;
+  }
+
+  return `<div class="complex-date"><span data-text="등록일: ">${startDate}</span></div>`;
+}
+
+// 📊 조회수/활동 렌더링
+function renderStats(info) {
+  const view = info.viewCnt ? `<span style="color: rgba(15,17,20,1)" data-text="조회 ">${escapeHTML(info.viewCnt)}</span>` : '';
+  const slash1 = info.viewCnt && info.salesActCnt ? '<span style="opacity: 0.5"> / </span>' : '';
+  const act = info.salesActCnt ? `<span style="color: rgba(237,32,40,1)" data-text="활동 ">${escapeHTML(info.salesActCnt)}</span>` : '';
+  const slash2 = info.salesActCnt && info.salesResultCd ? '<span style="opacity: 0.5"> / </span>' : '';
+  const result = info.salesResultCd ? `<span style="color: rgba(15,17,20,1)" data-text="영업활동 ">${escapeHTML(info.salesResultCd)}</span>` : '';
+
+  return view || act || result
+    ? `<div class="complex-data">${view}${slash1}${act}${slash2}${result}</div>`
+    : '';
+}
+
+// 🧱 마커 콘텐츠 생성
+function renderMarkerContent(info, groupId) {
+  if (groupId) {
+    return `
+      <div class="marker" data-id="${escapeHTML(groupId)}">
+        <div class="marker-complex-inner badge-border" data-text="동일주소" show-text="동일주소">
+          <div class="complex-infos">
+            <div class="complex-title">
+              <span class="badge" data-text="동일주소" show-text="동일주소"></span>
+            </div>
+            ${info.map((item) => `
+              <div class="complex-address">
+                <span class="marker-item" data-store-id="${escapeHTML(item.storeId)}">
+                  ${escapeHTML(item.storeNm)} (${escapeHTML(item.ctgryCd)})
+                </span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    const placeId = escapeHTML(info.placeId);
+    const ctgryCd = escapeHTML(info.ctgryCd);
+    const ctgryNm = escapeHTML(info.ctgryNm);
+    const storeNm = escapeHTML(info.storeNm);
+    const addr = escapeHTML(info.addr || info.roadAddr);
+
+    return `
+      <div class="marker" data-id="${placeId}">
+        <div class="marker-complex-inner badge-border" data-text="${ctgryCd}" show-text="${ctgryNm}">
+          <div class="complex-infos">
+            <div class="complex-title">
+              <span class="store-name">${storeNm}</span>
+              <span class="badge" data-text="${ctgryCd}" show-text="${ctgryNm}"></span>
+            </div>
+            ${addr ? `<div class="complex-address">${addr}</div>` : ''}
+            ${renderDate(info)}
+            ${renderStats(info)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
