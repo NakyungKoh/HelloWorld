@@ -1,0 +1,37 @@
+cd /d %ProgramFiles(x86)%\Microsoft Office\Office16
+
+ 
+오피스 2019 프로
+for /f %x in ('dir /b ..\root\Licenses16\ProPlus2019VL*.xrm-ms') do cscript ospp.vbs /inslic:"..\root\Licenses16\%x"
+
+오피스 2016 프로
+for /f %x in ('dir /b ..\root\Licenses16\proplusvl_kms*.xrm-ms') do cscript ospp.vbs /inslic:"..\root\Licenses16\%x"
+
+오피스 2021 프로
+for /f %x in ('dir /b ..\root\Licenses16\ProPlus2021VL*.xrm-ms') do cscript ospp.vbs /inslic:"..\root\Licenses16\%x"
+
+cscript ospp.vbs /setprt:1688
+
+cscript ospp.vbs /unpkey:6MWKP
+
+오피스 2019 프로페셔널 명령어
+cscript ospp.vbs /inpkey:NMMKJ-6RK4F-KMJVX-8D9MJ-6MWKP
+
+오피스 2016 프로페셔널 명령어
+cscript ospp.vbs /inpkey:XQNVK-8JYDB-WJ9W3-YJ8YR-WFG99
+
+오피스 2021 프로페셔널 명령어
+cscript ospp.vbs /inpkey:FXYTK-NJJ8C-GB6DW-3DYQT-6F7TH
+
+
+cscript ospp.vbs /sethst:s8.uk.to
+ 
+인증 서버 주소가 변경되서 수정했습니다.
+위 주소로 인증이 안되면 아래 주소로 바꿔보세요.
+ 
+cscript ospp.vbs /sethst:s9.us.to
+
+마지막 명령어입니다.
+cscript ospp.vbs /act
+
+
